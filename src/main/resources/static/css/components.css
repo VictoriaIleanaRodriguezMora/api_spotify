@@ -1,0 +1,48 @@
+.btn-logout {
+    background: transparent;
+    color: var(--error);
+    border: 1px solid var(--error);
+    padding: 10px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    width: 100%;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-logout:hover { background: var(--error); color: white; }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background-color: var(--bg-surface);
+    padding: 15px;
+    border-radius: var(--radius-md);
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.card:hover { background-color: var(--bg-elevated); }
+
+.card-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.card-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-subtitle { font-size: 13px; color: var(--text-muted); }

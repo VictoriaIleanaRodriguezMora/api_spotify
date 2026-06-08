@@ -1,0 +1,26 @@
+:root {
+
+    --bg-base: #0a0a0f;      
+    --bg-surface: #14141e;   
+    --bg-elevated: #1e1e2d;   
+    
+    --primary: #00e5ff;       
+    --primary-hover: #00b8cc;
+    --secondary: #8a2be2;     
+    
+    --text-main: #ffffff;
+    --text-muted: #a0a0b0;
+    
+    --error: #ff3366;
+    --success: #00e676;
+
+
+    --font-family: 'Segoe UI', system-ui, sans-serif;
+    
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-pill: 50px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+}
