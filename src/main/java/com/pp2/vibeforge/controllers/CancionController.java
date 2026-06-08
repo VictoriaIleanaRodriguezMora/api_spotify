@@ -20,7 +20,6 @@ public class CancionController {
         return cancionRepository.findAll();
     }
 
-    // Ruta para mostrar solo las canciones de un álbum al abrirlo en el Frontend
     @GetMapping("/album/{idAlbum}")
     public List<Cancion> obtenerPorAlbum(@PathVariable Integer idAlbum) {
         return cancionRepository.findByIdAlbum(idAlbum);

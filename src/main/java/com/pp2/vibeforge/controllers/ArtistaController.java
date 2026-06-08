@@ -17,34 +17,28 @@ public class ArtistaController {
     @Autowired
     private ArtistaRepository artistaRepository;
 
-    // CONSULTA (GET) - Todos
     @GetMapping
     public List<Artista> obtenerTodos() {
         return artistaRepository.findAll();
     }
 
-    // CONSULTA (GET) - Por ID
     @GetMapping("/{id}")
     public Optional<Artista> obtenerPorId(@PathVariable Integer id) {
         return artistaRepository.findById(id);
     }
 
-    // --- NUEVO ENDPOINT: BUSCAR IMAGEN EN DEEZER Y GUARDARLA ---
     @GetMapping("/{id}/imagen")
     public org.springframework.http.ResponseEntity<String> obtenerImagenDeezer(@PathVariable Integer id) {
         Artista artista = artistaRepository.findById(id).orElseThrow();
 
         try {
             String nombre = artista.getNombreArtistico();
-            // Limpiamos un poco el nombre para que Deezer lo encuentre mejor
             String urlDeezer = "https://api.deezer.com/search/artist?q=" + java.net.URLEncoder.encode(nombre, "UTF-8");
 
-            // Java hace la llamada a Deezer sin problemas de CORS (Actualizado para Java
-            // 20+)
             java.net.URL url = java.net.URI.create(urlDeezer).toURL();
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0"); // Nos disfrazamos de navegador
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0"); 
 
             java.io.BufferedReader reader = new java.io.BufferedReader(
                     new java.io.InputStreamReader(conn.getInputStream()));
@@ -56,16 +50,13 @@ public class ArtistaController {
 
             String json = sb.toString();
 
-            // Extraemos picture_xl con tu búsqueda de texto
             String buscar = "\"picture_xl\":\"";
             int inicio = json.indexOf(buscar);
             if (inicio != -1) {
                 inicio += buscar.length();
                 int fin = json.indexOf("\"", inicio);
-                // Las URLs en JSON vienen con caracteres de escape, los limpiamos
                 String imageUrl = json.substring(inicio, fin).replace("\\/", "/");
 
-                // La guardamos directamente en la BD
                 artista.setImagenUrl(imageUrl);
                 artistaRepository.save(artista);
 
@@ -76,7 +67,6 @@ public class ArtistaController {
             System.out.println("Error buscando en Deezer: " + e.getMessage());
         }
 
-        // Si falla, guardamos la silueta por defecto en la BD para que no quede vacío
         String silueta = "https://i.scdn.co/image/ab6761610000e5eb55d39ab9c21d506aa52f7021";
         artista.setImagenUrl(silueta);
         artistaRepository.save(artista);
@@ -84,17 +74,14 @@ public class ArtistaController {
         return org.springframework.http.ResponseEntity.ok(silueta);
     }
 
-    // ALTA (POST)
     @PostMapping
     public Artista crearArtista(@RequestBody Artista artista) {
         return artistaRepository.save(artista);
     }
 
-    // --- ALTA MÁGICA DE ARTISTA + ÁLBUMES (DEEZER) ---
     @PostMapping("/importar")
     public org.springframework.http.ResponseEntity<?> importarArtistaCompleto(@RequestParam String nombreArtista) {
         
-        // 1. Verificar si ya existe
         List<Artista> existentes = artistaRepository.findAll();
         boolean yaExiste = existentes.stream().anyMatch(a -> a.getNombreArtistico().equalsIgnoreCase(nombreArtista));
         if (yaExiste) {
@@ -104,10 +91,8 @@ public class ArtistaController {
         RestTemplate restTemplate = new RestTemplate();
         
         try {
-            // 2. Buscar Artista en Deezer
             String urlBusquedaArtista = "https://api.deezer.com/search/artist?q=" + java.net.URLEncoder.encode(nombreArtista, "UTF-8");
             
-            // Le pedimos a Spring que convierta el JSON en un Map de Java automáticamente
             @SuppressWarnings("unchecked")
             Map<String, Object> respuestaDeezer = restTemplate.getForObject(urlBusquedaArtista, Map.class);
             
@@ -124,7 +109,6 @@ public class ArtistaController {
             Map<String, Object> datosPrimerArtista = dataArtista.get(0);
             String idDeezerArtista = datosPrimerArtista.get("id").toString();
             
-            // 3. Crear y guardar el Artista
             Artista nuevoArtista = new Artista();
             nuevoArtista.setNombreArtistico(datosPrimerArtista.get("name").toString());
             nuevoArtista.setImagenUrl(datosPrimerArtista.get("picture_xl").toString());
@@ -132,7 +116,6 @@ public class ArtistaController {
             
             artistaRepository.save(nuevoArtista);
 
-            // 4. Buscar sus 3 álbumes
             String urlAlbumes = "https://api.deezer.com/artist/" + idDeezerArtista + "/albums?limit=3";
             
             @SuppressWarnings("unchecked")
@@ -143,7 +126,6 @@ public class ArtistaController {
                 List<Map<String, Object>> dataAlbumes = (List<Map<String, Object>>) respuestaAlbumes.get("data");
                 
                 for (Map<String, Object> albumDeezer : dataAlbumes) {
-                    // Evitamos guardar los singles
                     if (albumDeezer.get("record_type") != null && albumDeezer.get("record_type").toString().equals("single")) {
                         continue;
                     }
@@ -155,7 +137,6 @@ public class ArtistaController {
                     
                     albumRepository.save(nuevoAlbum);
 
-                    // --- MAGIA PARA LAS CANCIONES DEL ÁLBUM ---
                     String idDeezerAlbum = albumDeezer.get("id").toString();
                     String urlCanciones = "https://api.deezer.com/album/" + idDeezerAlbum + "/tracks";
                     
@@ -171,14 +152,11 @@ public class ArtistaController {
                             
                             nuevaCancion.setTitulo(trackDeezer.get("title").toString());
                             
-                            // Transformamos a String y luego a Integer para evitar errores de casteo con el JSON
                             nuevaCancion.setDuracion(Integer.parseInt(trackDeezer.get("duration").toString())); 
                             
-                            // Vinculamos la canción con sus padres
                             nuevaCancion.setIdAlbum(nuevoAlbum.getIdAlbum()); 
                             nuevaCancion.setIdArtista(nuevoArtista.getIdArtista());
                             
-                            // Le agregamos una descripción por defecto
                             nuevaCancion.setDescripcion("Importado automáticamente desde Deezer API");
                             
                             cancionRepository.save(nuevaCancion);
@@ -196,7 +174,6 @@ public class ArtistaController {
         }
     }
 
-    // MODIFICACIÓN (PUT)
     @PutMapping("/{id}")
     public Artista actualizarArtista(@PathVariable Integer id, @RequestBody Artista detallesArtista) {
         Artista artista = artistaRepository.findById(id).orElseThrow();
@@ -207,7 +184,6 @@ public class ArtistaController {
         return artistaRepository.save(artista);
     }
 
-    // BAJA (DELETE)
     @DeleteMapping("/{id}")
     public void borrarArtista(@PathVariable Integer id) {
         artistaRepository.deleteById(id);
